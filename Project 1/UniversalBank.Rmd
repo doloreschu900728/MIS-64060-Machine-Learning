@@ -1,19 +1,126 @@
 ---
-title: "R Notebook"
+title: "Machine Learining_Project 1"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
-
+Read in file.Intall caret.
 ```{r}
-plot(cars)
+UBdata<-read.csv("UniversalBank.csv")
+head(UBdata)
+summary(UBdata)
+
+install.packages("caret")
+library(caret)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+Transform categorical predictors with more than two categories into dummy variables. In this case, Education.
+```{r}
+UBdata$Education<-as.factor(UBdata$Education)
+dummy_model<-dummyVars(~Education,data=UBdata)
+head(predict(dummy_model, UBdata))
+Education_dummy<-predict(dummy_model, UBdata)
+Education_dummy
+UBdata<-cbind(UBdata, predict(dummy_model, UBdata))
+UBdata$Education<- NULL
+UBdata
+```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+Nomralize Data
+```{r}
+Norm_UBdata<-preProcess(UBdata[, c(2, 3, 4, 6, 7, 8)], method = c("center", "scale"))
+UBdata_normalized<- predict(Norm_UBdata,UBdata)
+summary(UBdata_normalized)
+```
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+Partition the data into training (60%) and validation (40%) sets.
+```{r}
+Train_Index<-createDataPartition(UBdata$Personal.Loan, p = 0.6, list=FALSE)
+Train_Data<-UBdata[Train_Index,]
+Test_Data<-UBdata[-Train_Index,]
+```
+
+Examine that that 2 sets have similar distribution in personal loan acceptance rate
+```{r}
+summary(Train_Data$Personal.Loan)
+summary(Test_Data$Personal.Loan)
+```
+
+Train the model using the training set.
+```{r}
+set.seed(123)
+UBdata_normalized$Personal.Loan<- as.factor(UBdata_normalized$Personal.Loan)
+model<-train(Personal.Loan~Age+Experience+Income+Family+CCAvg+Mortgage+Securities.Account+CD.Account+Online+CreditCard+Education.1+Education.2+Education.3, data = UBdata_normalized, method = "knn")
+model
+```
+Use the model with k = 7 to predict the given case
+```{r}
+install.packages("class")
+library(class)
+library(ISLR)
+Test_Customer<- data.frame("Age" = 40, "Experience" = 10, "Income" = 84, "Family" = 2, "CCAvg" = 2, "Education_1" = 0, "Education_2" = 1, "Education_3" = 0, "Mortgage" = 0, "Securities Account" = 0, "CD Account" = 0, "Online" = 1, "Credit Card" = 1)
+
+Train_Predictors <- Train_Data[, c(2:4, 6:8, 10:16)]
+Customer_Predictors <- Test_Customer
+Train_Labels <- Train_Data[, 9]
+Predicted_customer_labels <- knn(Train_Predictors, Customer_Predictors, cl = Train_Labels, k = 7)
+Predicted_customer_labels
+#According to the model, this customer would be classified as unsuccessful (loan not accepted).
+```
+
+2. What is a choice of k that balances between overfitting and ignoring the predictor information?
+k = 7.
+
+3. Show the confusion matrix for the validation data that results from using the best k.
+```{r}
+Test_Predictors <- Test_Data[, c(2:4, 6:8, 10:16)]
+Test_Labels <- Test_Data[, 9]
+Predicted_test_labels <- knn(Train_Predictors, Test_Predictors, cl = Train_Labels, k = 7)
+
+install.packages("gmodels")
+library(gmodels)
+
+CrossTable(x=Test_Labels, y=Predicted_test_labels, prop.chisq = FALSE)
+```
+
+
+4. Consider the following customer: Age = 40, Experience = 10, Income = 84,
+Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0,
+Mortgage = 0, Securities Account = 0, CD Account = 0, Online = 1 and Credit
+Card = 1. Classify the customer using the best k.
+```{r}
+Customer_2_Predictors <- data.frame("Age" = 40, "Experience" = 10, "Income" = 84,
+"Family" = 2, "CCAvg" = 2, "Education_1" = 0, "Education_2" = 1, "Education_3" = 0,
+"Mortgage" = 0, "Securities Account" = 0, "CD Account" = 0, "Online" = 1., "Credit
+Card" = 1)
+Predicted_customer_2_label <- knn(Train_Predictors, Customer_2_Predictors, cl = Train_Labels, k = 7)
+Predicted_customer_2_label
+```
+
+
+
+5. Repartition the data, this time into training, validation, and test sets (50% : 30% : 20%). Apply the k-NN method with the k chosen above. Compare the confusion matrix of the test set with that of the training and validation sets. Comment on the differences and their reason.
+```{r}
+Train_Index = createDataPartition(UBdata$Personal.Loan, p = 0.5, list = FALSE)
+Train_Data = UBdata[Train_Index,]
+Non_Train_Data = UBdata[-Train_Index,]
+Validation_Index = createDataPartition(Non_Train_Data$Personal.Loan, p = 0.6, list = FALSE)
+Validation_Data = Non_Train_Data[Validation_Index, ]
+Test_Data = Non_Train_Data[-Validation_Index,]
+summary(Train_Data$Personal.Loan)
+summary(Validation_Data$Personal.Loan)
+summary(Test_Data$Personal.Loan)
+set.seed(123)
+Train_Predictors <- Train_Data[, c(2:4, 6:8, 10:16)]
+Validation_Predictors <- Validation_Data[, c(2:4, 6:8, 10:16)]
+Test_Predictors <- Test_Data[, c(2:4, 6:8, 10:16)]
+Train_Labels <- Train_Data[, 9]
+Validation_Labels <- Validation_Data[, 9]
+Test_Labels <- Test_Data[, 9]
+Predicted_Validation_Labels <- knn(Train_Predictors, Validation_Predictors, cl = Train_Labels, k = 7)
+Predicted_Test_Labels <- knn(Train_Predictors, Test_Predictors, cl = Train_Labels, k = 7)
+head(Predicted_Test_Labels)
+CrossTable(x = Validation_Labels, y = Predicted_Validation_Labels)
+CrossTable(x = Test_Labels, y = Predicted_Test_Labels)
+```
+
 
