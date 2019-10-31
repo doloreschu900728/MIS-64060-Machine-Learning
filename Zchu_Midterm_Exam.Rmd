@@ -1,0 +1,80 @@
+---
+title: "Midterm"
+author: "Dolores Chu"
+date: "10/24/2019"
+output: html_document
+---
+
+##### The dataset on American College and University Rankings contains information on 1302 American colleges and universities offering an undergraduate program. For each university, there are 17 measurements, including continuous measurements (such as tuition and graduation rate) and categorical measurements (such as location by state and whether it is a private or public school).
+
+##### Note that many records are missing some measurements. 
+
+Read in data
+```{r}
+university_data <- read.csv("Universities.csv")
+library(caret)
+library(tidyverse)
+library(dplyr)
+```
+
+##### a. Remove all records with missing measurements from the dataset.
+```{r}
+university_data <- na.omit(university_data)
+```
+
+##### b. For all the continuous measurements, run K-Means clustering. Make sure to normalize the measurements. How many clusters seem reasonable for describing these data? What was your optimal K?
+It seems that k=2 is the optimal solution.
+```{r}
+university_data_cont <- university_data [, 4:20]
+norm_model <- preProcess(university_data_cont, method = "range")
+udata_cont_norm <- predict(norm_model, university_data_cont)
+library(factoextra)
+fviz_nbclust(udata_cont_norm, kmeans, method = "wss")
+fviz_nbclust(udata_cont_norm, kmeans, method = "silhouette")
+```
+
+
+##### c. Compare the summary statistics for each cluster and describe each cluster in this context (e.g., “Universities with high tuition, low acceptance rate...”).
+Cluster 1: Universities with more new students enrolled, less new student from top 10 or 25 (college? high school?), more full-time and part-time undergrad students, tuitions are significantly lower, less room(?) and board (?), more personale; less of the falcuty memebrs of these universities have PHD degrees, and the student/faculty ratio is higher; finally, the graduation rates of these universities are lower.  
+Cluster 2: in terms of students, these universities have less new students enrolled, and more students from top 10 or 25, and less part-time and full-time undergrad students. Tuitions of these univesities are significantly higher. These are universities with more room and board (?). In terms of staff and faculty, these universities have less estimated personale. More of their faculties have PHD degrees, and the student/faculty ratios are lower. Finally, the graduation rates of these universities are higher. 
+```{r}
+set.seed(123)
+k2 <- kmeans(udata_cont_norm, centers = 2, nstart = 25)
+k2$centers
+```
+
+
+##### d. Use the categorical measurements that were not used in the analysis (State and Private/Public) to characterize the different clusters. Is there any relationship between the clusters and the categorical information?
+Make scatter plots for each cluster. It seems that both clusters have universities spread out in different states. However, cluster#1 is consist of mostly private universities, but cluster#2 is consist of both both private and public universities. 
+
+```{r}
+university_data$cluster_label <- k2$cluster
+library(ggplot2)
+ggplot(university_data[university_data$cluster_label==1, ], aes(x = State, y = Public..1...Private..2.)) + geom_point()
+ggplot(university_data[university_data$cluster_label==2, ], aes(x = State, y = Public..1...Private..2.)) + geom_point()
+```
+
+
+##### e. What other external information can explain the contents of some or all of these clusters?
+Cluster 2 has more prestigious universities (private and public) such as Harvard University, Columbia University, Boston University, University of Chicago, etc.
+```{r}
+Cluster_1 <- university_data[university_data$cluster_label == 1, ]
+Cluster_1$College.Name
+Cluster_2 <- university_data[university_data$cluster_label == 2, ]
+Cluster_2$College.Name
+```
+
+
+##### f. Consider Tufts University, which is missing some information. Compute the Euclidean distance of this record from each of the clusters that you found above (using only the measurements that you have). Which cluster is it closest to? Impute the missing values for Tufts by taking the average of the cluster on those measurements. 
+```{r}
+library(flexclust)
+set.seed(123)
+k2 <- kcca(udata_cont_norm, k=2, kccaFamily("kmeans"))
+
+```
+
+
+
+
+
+
