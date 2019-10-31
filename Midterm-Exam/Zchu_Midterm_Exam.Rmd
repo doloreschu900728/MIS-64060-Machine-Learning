@@ -84,6 +84,7 @@ distance_1 > distance_2
 Impute missing valuess for Tufts by taking the average of the cluster on those measurements. 
 ```{r}
 Tufts$X..PT.undergrad <-centroids[2, 7]
+Tufts
 ```
 
 
