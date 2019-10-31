@@ -66,12 +66,26 @@ Cluster_2$College.Name
 
 
 ##### f. Consider Tufts University, which is missing some information. Compute the Euclidean distance of this record from each of the clusters that you found above (using only the measurements that you have). Which cluster is it closest to? Impute the missing values for Tufts by taking the average of the cluster on those measurements. 
+Calculating the Euclidean distance of Tufts University using measurements we have.Since the Euclidean distance between Tufts and cluster 1 is greater than that of cluster 2, Tufts belong to cluster 2.
 ```{r}
-library(flexclust)
-set.seed(123)
-k2 <- kcca(udata_cont_norm, k=2, kccaFamily("kmeans"))
-
+university_data <- read.csv("Universities.csv")
+university_data[university_data$College.Name == "Tufts University", ]
+university_data_cont <- university_data[, 4:20]
+university_data_cont_n <- scale(university_data_cont)
+Tufts <- university_data_cont_n[476,]
+centroids <- k2$centers
+DF_1 <- rbind(Tufts, centroids[1,])
+DF_2 <- rbind(Tufts, centroids[2,])
+distance_1 <- get_dist(DF_1)
+distance_2 <- get_dist(DF_2)
+distance_1 > distance_2
 ```
+
+Impute missing valuess for Tufts by taking the average of the cluster on those measurements. 
+```{r}
+Tufts$X..PT.undergrad <-centroids[2, 7]
+```
+
 
 
 
