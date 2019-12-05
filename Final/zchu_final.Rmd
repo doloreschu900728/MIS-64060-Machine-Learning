@@ -1,0 +1,97 @@
+---
+title: "zchu_Final"
+author: "Dolores Chu"
+date: "12/4/2019"
+output: html_document
+---
+
+##### Load and examine data.
+```{r}
+data <- read.csv("BathSoap.csv")
+str(data)
+head(data)
+colnames(data)
+```
+
+##### Tranform some variables from factors to numeric.
+```{r}
+data[,20] <- (as.numeric(gsub("%", "", (as.character(data[, 20])))))/100
+data[,21] <- (as.numeric(gsub("%", "", (as.character(data[, 21])))))/100
+data[,22] <- (as.numeric(gsub("%", "", (as.character(data[, 22])))))/100
+data[,23] <- (as.numeric(gsub("%", "", (as.character(data[, 23])))))/100
+data[,24] <- (as.numeric(gsub("%", "", (as.character(data[, 24])))))/100
+data[,25] <- (as.numeric(gsub("%", "", (as.character(data[, 25])))))/100
+data[,26] <- (as.numeric(gsub("%", "", (as.character(data[, 26])))))/100
+data[,27] <- (as.numeric(gsub("%", "", (as.character(data[, 27])))))/100
+data[,28] <- (as.numeric(gsub("%", "", (as.character(data[, 28])))))/100
+data[,29] <- (as.numeric(gsub("%", "", (as.character(data[, 29])))))/100
+data[,30] <- (as.numeric(gsub("%", "", (as.character(data[, 30])))))/100
+data[,31] <- (as.numeric(gsub("%", "", (as.character(data[, 31])))))/100
+data[,32] <- (as.numeric(gsub("%", "", (as.character(data[, 32])))))/100
+data[,33] <- (as.numeric(gsub("%", "", (as.character(data[, 33])))))/100
+data[,34] <- (as.numeric(gsub("%", "", (as.character(data[, 34])))))/100
+data[,35] <- (as.numeric(gsub("%", "", (as.character(data[, 35])))))/100
+data[,36] <- (as.numeric(gsub("%", "", (as.character(data[, 36])))))/100
+data[,37] <- (as.numeric(gsub("%", "", (as.character(data[, 37])))))/100
+data[,38] <- (as.numeric(gsub("%", "", (as.character(data[, 38])))))/100
+data[,39] <- (as.numeric(gsub("%", "", (as.character(data[, 39])))))/100
+data[,40] <- (as.numeric(gsub("%", "", (as.character(data[, 40])))))/100
+data[,41] <- (as.numeric(gsub("%", "", (as.character(data[, 41])))))/100
+data[,42] <- (as.numeric(gsub("%", "", (as.character(data[, 42])))))/100
+data[,43] <- (as.numeric(gsub("%", "", (as.character(data[, 43])))))/100
+data[,44] <- (as.numeric(gsub("%", "", (as.character(data[, 44])))))/100
+data[,45] <- (as.numeric(gsub("%", "", (as.character(data[, 45])))))/100
+data[,46] <- (as.numeric(gsub("%", "", (as.character(data[, 46])))))/100
+```
+
+##### For the brand purchase percentage variables, pick the highest one for each observation and assign it to a new variabel called "Max.Br.Cd". Then remove the individual brand purchase percentage variables. Also remove the demographic variables. 
+```{r}
+data$Max.Br.Cd <- apply(data[,23:31], 1, max)
+data <- data[,-c(1:11,23:31)]
+```
+
+##### Normalize continuous variables.
+```{r}
+library(caret)
+norm_model<-preProcess(data,method = "range")
+data_norm <- predict(norm_model,data)
+```
+
+
+##### Selecting optimal k. It seems like k = 2 is the best choice.
+```{r}
+library(factoextra)
+distance <- get_dist(data_norm)
+set.seed(123)
+fviz_nbclust(data_norm, kmeans, method = "wss")
+fviz_nbclust(data_norm, kmeans, method = "silhouette")
+```
+
+##### Apply k-means algorithm with k = 2.
+```{r}
+k2 <- kmeans(data_norm,centers = 2, nstart = 25)
+k2$centers
+k2$size
+fviz_cluster(k2, data = data_norm)
+```
+
+##### Analyze the clusters
+```{r}
+data$cluster <- k2$cluster
+Cluster_1 <- data[data$cluster == 1, ]
+Cluster_2 <- data[data$cluster == 2, ]
+summary(Cluster_1)
+summary(Cluster_2)
+```
+
+##### To develop a model to classify future data, I define my target segment as customers who have lower brand loyalty and higher purchasing power (Cluster 1). I assume the model will be used by businesses that are trying to gain new customers.
+##### I use the k-nn algorithm to buil the model, k=7.
+```{r}
+set.seed(123)
+library(e1071)
+data_norm$cluster <- k2$cluster
+data_norm$cluster <- as.factor(data_norm$cluster)
+search_grid <- expand.grid(k=c(1:10))
+model <- train(cluster~., data = data_norm, method = "knn", tuneGrid=search_grid)
+model
+```
