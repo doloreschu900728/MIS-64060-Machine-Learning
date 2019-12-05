@@ -45,21 +45,54 @@ I would start with choosing 6 clusters.
 hc_ward <- hclust(distance, method = "ward.D")
 plot(hc_ward, cex = 0.6, hang = -1)
 rect.hclust(hc_ward, k = 6, border = 1:6)     
+Model_1 <- cutree(hc_ward, 6)
+data <- cbind(data,Model_1)
 ```
 
 
 ##### c. Comment on the structure of the clusters and on their stability. Hint: To check stability,  partition the data and see how well clusters formed based on one part apply to the other part. To do this:  
 #####  a. Cluster partition A  
 ```{r}
-data_norm$index <- row.names(data_norm)
 set.seed(123)
-ClusterA <- data_norm[sample(nrow(data_norm),67), ]
-ClusterA_index <- ClusterA$index
-ClusterB <- data_norm[-ClusterA_index,]
+dataA_index <- sample(seq_len(nrow(data_norm)), size = 67)
+dataA <- data_norm[dataA_index,]
+dataB <- data_norm[-dataA_index,]
 ```
 
 #####  b. Use the cluster centroids from A to assign each record in partition B (each record is assigned to the cluster with the closest centroid).  
-#####  c. Assess how consistent the cluster assignments are compared to the assignments based on all the data.  
+```{r}
+dataA_dist <- dist(dataA[, -c(1:3)], method = "euclidean")
+hc_A <- hclust(dataA_dist, method = "ward.D")
+Model_A <- cutree(hc_A, 6)
+dataA <- cbind(Model_A, dataA)
+head(dataA)
+library(dplyr)
+C1 <- colMeans(dataA[dataA$Model_A == 1,5:ncol(dataA)])
+C2 <- colMeans(dataA[dataA$Model_A == 2,5:ncol(dataA)])
+C3 <- colMeans(dataA[dataA$Model_A == 3,5:ncol(dataA)])
+C4 <- colMeans(dataA[dataA$Model_A == 4,5:ncol(dataA)])
+C5 <- colMeans(dataA[dataA$Model_A == 5,5:ncol(dataA)])
+C6 <- colMeans(dataA[dataA$Model_A == 6,5:ncol(dataA)])
+Centroids_A <- rbind(C1, C2, C3, C4, C5, C6)
+dist <- dist(rbind(Centroids_A,dataB[,4:ncol(dataB)]))
+dist
+```
+
+
+#####  c. Assess how consistent the cluster assignments are compared to the assignments based on all the data.
+```{r}
+Assignments<- data.frame(data[-dataA_index, "Model_1"])
+Assignments$Model_A <- 0
+Assignments[1,2] <- which.max(c(2.462441,3.146983,3.782227,5.983747,4.881300,3.826735))
+Assignments[2,2] <- which.max(c(2.312626,3.855177, 4.581339, 8.455727 ,4.827885 ,5.441721))
+Assignments[3,2] <- which.max(c(3.437484, 1.869957, 4.404072, 8.395433, 4.851045, 4.429787))
+Assignments[4,2] <- which.max(c(3.339714, 1.285089 ,4.752289, 8.059830, 4.687570, 3.657016))
+Assignments[5,2] <- which.max(c(3.007575 ,3.930439 ,2.431885, 6.230808, 5.027546, 4.008456))
+Assignments[6,2] <- which.max(c(3.159701 ,4.694503 ,4.418982, 6.075311, 4.930370, 3.901197))
+Assignments[7,2] <- which.max(c(2.691188 ,3.357138, 4.095313, 6.119492, 4.677708, 2.705759))
+Assignments
+```
+
 
 ##### d. The elementary public schools would like to choose a set of cereals to include in their daily cafeterias. Every day a different cereal is offered, but all cereals should support a healthy diet. For this goal, you are requested to find a cluster of “healthy cereals.” Should the data be normalized? If not, how should they be used in the cluster analysis?
 No. They should be used as is in the cluster analysis because we would want absolute values for the nutritional values of each cereal. 
